@@ -1,0 +1,8 @@
+[project]
+name = "pipecat-ph"
+version = "0.0.0"
+description = "Pipecat plugins for Filipino (Taglish) voice agents"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.10,<3.14"
+dependencies = []
