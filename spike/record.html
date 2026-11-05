@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<title>Taglish STT spike recorder</title>
+<style>
+  body { font: 18px/1.5 system-ui, sans-serif; max-width: 40rem; margin: 3rem auto; padding: 0 1rem; }
+  #prompt { font-size: 1.6rem; margin: 1rem 0 2rem; min-height: 5rem; }
+  button { font: inherit; padding: .5rem 1rem; margin-right: .5rem; }
+  #heard { color: #555; min-height: 3rem; }
+</style>
+<p id="progress"></p>
+<p id="prompt"></p>
+<button id="record">Record</button>
+<button id="back">Back</button>
+<button id="save">Download browser.json</button>
+<p id="status" role="status"></p>
+<p id="heard"></p>
+<script type="module">
+  // Records each prompt as NN.webm and, at the same time, keeps what Chrome's own
+  // SpeechRecognition heard. That transcript is the baseline the paid engines must beat.
+  const prompts = (await (await fetch("prompts.txt")).text()).split("\n").filter(Boolean);
+  const heard = JSON.parse(localStorage.getItem("heard") ?? "{}");
+  const Recognition = window.SpeechRecognition ?? window.webkitSpeechRecognition;
+  const $ = (id) => document.getElementById(id);
+  const id = (i) => String(i + 1).padStart(2, "0");
+  let i = Number(localStorage.getItem("index") ?? 0);
+  let stop = null;
+
+  function show() {
+    $("progress").textContent = `Prompt ${i + 1} of ${prompts.length}`;
+    $("prompt").textContent = prompts[i] ?? "Done. Download browser.json and move the clips (see README).";
+    $("heard").textContent = heard[id(i)] ? `Chrome heard: ${heard[id(i)]}` : "";
+    $("record").disabled = i >= prompts.length;
+    localStorage.setItem("index", i);
+  }
+
+  async function start() {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const chunks = [];
+    const recorder = new MediaRecorder(stream);
+    recorder.ondataavailable = (e) => chunks.push(e.data);
+    const finished = new Promise((resolve) => (recorder.onstop = resolve));
+    recorder.start();
+
+    let text = "";
+    const recognition = Recognition ? new Recognition() : null;
+    if (recognition) {
+      recognition.lang = "fil-PH";
+      recognition.continuous = true;
+      recognition.onresult = (e) => {
+        text = [...e.results].filter((r) => r.isFinal).map((r) => r[0].transcript).join(" ");
+      };
+      recognition.start();
+    }
+    $("status").textContent = Recognition ? "Recording… read the prompt, then press Stop." : "Recording (this browser has no SpeechRecognition; use Chrome for the baseline).";
+    $("record").textContent = "Stop";
+
+    return async () => {
+      recognition?.stop();
+      recorder.stop();
+      await finished;
+      stream.getTracks().forEach((t) => t.stop());
+      // Recognition delivers its last final result shortly after stop().
+      await new Promise((r) => setTimeout(r, 800));
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(new Blob(chunks, { type: recorder.mimeType }));
+      a.download = `${id(i)}.webm`;
+      a.click();
+      heard[id(i)] = text.trim();
+      localStorage.setItem("heard", JSON.stringify(heard));
+      $("status").textContent = `Saved ${id(i)}.webm`;
+      $("record").textContent = "Record";
+      i += 1;
+      show();
+    };
+  }
+
+  $("record").onclick = async () => {
+    if (stop) {
+      const s = stop;
+      stop = null;
+      await s();
+    } else {
+      stop = await start();
+    }
+  };
+  $("back").onclick = () => { if (!stop && i > 0) { i -= 1; show(); } };
+  $("save").onclick = () => {
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([JSON.stringify(heard, null, 2)], { type: "application/json" }));
+    a.download = "browser.json";
+    a.click();
+  };
+  show();
+</script>
