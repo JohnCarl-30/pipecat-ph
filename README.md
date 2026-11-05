@@ -2,8 +2,8 @@
 
 Pipecat plugins for Filipino (Taglish) voice agents.
 
-**Status: planning.** Nothing here works yet. The first code lands only after the
-spike below shows Taglish speech recognition is good enough to build on.
+**Status: spike.** `spike/` holds the speech-recognition test. The plugins come
+only after it shows Taglish speech recognition is good enough to build on.
 
 ## What this will be
 
@@ -26,7 +26,7 @@ aggregator. This repo is the software on top.
 
 1. **Spike.** Record 20 Taglish questions. Run them through Deepgram (Tagalog
    model) and ElevenLabs Scribe. Score word accuracy by hand. If neither clearly
-   beats the browser `SpeechRecognition` API, stop here.
+   beats the browser `SpeechRecognition` API, stop here. How to run it: [spike/README.md](spike/README.md).
 2. **Phone bot.** `uv add "pipecat-ai[websocket,deepgram,elevenlabs,openai]"`,
    follow the Pipecat phone-bot guide, answer one Twilio number.
 3. **Relaydesk adapter.** Replace the LLM step with a processor that POSTs to

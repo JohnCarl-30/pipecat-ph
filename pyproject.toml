@@ -6,3 +6,11 @@ readme = "README.md"
 license = "MIT"
 requires-python = ">=3.10,<3.14"
 dependencies = []
+
+[dependency-groups]
+spike = [
+    "httpx>=0.28.1",
+]
+whisper = [
+    "mlx-whisper>=0.4.3",
+]
